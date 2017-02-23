@@ -226,14 +226,10 @@ def model_spec(image):
 def predictions(logits, class_feed):
     num_classes = 80
     num_bboxes = 5
-    anchor_priors = np.array([[0.738768, 0.874946], [2.42204, 2.65704], [4.30971, 7.04493], [
-10.246, 4.59428],  [12.6868, 11.8741]])
+    anchor_priors = np.array([[0.738768, 0.874946], [2.42204, 2.65704], [4.30971, 7.04493], [10.246, 4.59428],  [12.6868, 11.8741]])
     coords = 4
-    prob_thresh = 0.8
+    prob_thresh = 0.3
     iou_thresh = 0.8
-    # TODO hardcoded right now
-    w = 1920
-    h = 1080
 
     # bboxes_logits has shape of [B, N, H, W, 4]
     bboxes_logits = tf.stack([logits[:, :, :, i*num_classes + 0:(i+0)*num_classes + 4] for i in xrange(num_bboxes)], 0)
@@ -262,13 +258,17 @@ def predictions(logits, class_feed):
     # one reason might be because of the way they plot bounding boxes. at least for TF, tf.image.draw_bounding_boxes takes in boxes at floating points
     x1s = (tf.sigmoid(bboxes_logits[:, :, :, :, 0]) + col_grid_coords) / bboxes_shape[3]
     y1s = (tf.sigmoid(bboxes_logits[:, :, :, :, 1]) + row_grid_coords) / bboxes_shape[2]
-    x2s = x1s + (tf.exp(bboxes_logits[:, :, :, :, 2]) * reduce(lambda x, _: np.expand_dims(x, -1), xrange(3), anchor_priors[:,0]) / bboxes_shape[3])
-    y2s = y1s + (tf.exp(bboxes_logits[:, :, :, :, 3]) * reduce(lambda x, _: np.expand_dims(x, -1), xrange(3), anchor_priors[:,1]) / bboxes_shape[2])
+    ws = (tf.exp(bboxes_logits[:, :, :, :, 2]) * reduce(lambda x, _: np.expand_dims(x, -1), xrange(3), anchor_priors[:,0]) / bboxes_shape[3])
+    hs = (tf.exp(bboxes_logits[:, :, :, :, 3]) * reduce(lambda x, _: np.expand_dims(x, -1), xrange(3), anchor_priors[:,1]) / bboxes_shape[2])
+    x1s = (x1s - ws/2.0)
+    y1s = (y1s - hs/2.0)
+    x2s = (x1s + ws)
+    y2s = (y1s + hs)
     # note that tf.image.non_max_suppression takes in the coordinates in this format.
     bboxes = tf.stack([y1s, x1s, y2s, x2s], axis=-1)
 
     # scale_logits has shape of [B, N, H, W, 1]
-    scale_logits = tf.stack([logits[:, :, :, i*num_classes + 4:(i+0)*num_classes + 5] for i in xrange(num_bboxes)], 0)
+    scale_logits = tf.stack([logits[:, :, :, i*(num_classes+5) + 4:(i)*(num_classes+5) + 5] for i in xrange(num_bboxes)], 0)
     # scale_logits = tf.sigmoid(scale_logits)
     # with tf.control_dependencies([tf.assert_less_equal(scale_logits, 1.0), tf.assert_greater_equal(scale_logits, 0.0)]):
         # scale_logits = tf.identity(scale_logits)
@@ -276,7 +276,8 @@ def predictions(logits, class_feed):
     tf.add_to_collection('scale_logits', scale_logits)
 
     # cls_logits has shape of [B, N, H, W, 80]
-    cls_logits = tf.stack([logits[:, :, :, i*num_classes + 5:(i+1)*num_classes + 5] for i in xrange(num_bboxes)], 0)
+    cls_logits = tf.stack([logits[:, :, :, i*(num_classes+5) + 5:(i+1)*(num_classes + 5)] for i in xrange(num_bboxes)], 0)
+    tf.add_to_collection('cls_logits', cls_logits)
     # cls_logits = tf.nn.softmax(cls_logits, -1)
     # with tf.control_dependencies([tf.assert_less_equal(cls_logits, 1.0), tf.assert_greater_equal(cls_logits, 0.0)]):
     #     cls_logits = tf.identity(cls_logits)
@@ -284,18 +285,19 @@ def predictions(logits, class_feed):
     # # TODO check the behaviour of broadcasting. this might be a source of error.
     # # probabilities has shape of [5, N, 13, 13, 80]
     probabilities = cls_logits * scale_logits
+    tf.add_to_collection('probabilities', probabilities)
     # tf.assert_less_equal(probabilities, 1.0)
     # tf.assert_greater_equal(probabilities, 0.0)
 
     probs_shape = map(lambda f: int(f), probabilities.get_shape())
     probabilities_bool = tf.greater(probabilities, prob_thresh)
-    probabilities = tf.where(probabilities_bool, probabilities, tf.zeros(probs_shape))
-    tf.add_to_collection('probabilities', probabilities)
+    probabilities_filtered = tf.where(probabilities_bool, probabilities, tf.zeros(probs_shape))
+    tf.add_to_collection('probabilities_filtered', probabilities_filtered)
 
     # # car is index 2 so let's do that first
     nms_boxes = tf.reshape(bboxes, [reduce(lambda x, y: x*y, bboxes_shape[:-1]), bboxes_shape[-1]])
     nms_probs = tf.reshape(probabilities[:, :, :, :, class_feed], [reduce(lambda x, y: x*y, probs_shape[:-1])])
-    bboxes_indices = tf.image.non_max_suppression(nms_boxes, nms_probs, 10, iou_thresh)
+    bboxes_indices = tf.image.non_max_suppression(nms_boxes, nms_probs, 5, iou_thresh)
     bboxes_output = tf.gather(nms_boxes, bboxes_indices)
 
     if debug:
@@ -310,11 +312,11 @@ def predictions(logits, class_feed):
         print 'scale_logits: ', scale_logits.get_shape()
         print 'cls_logits: ', cls_logits.get_shape()
         print 'probabilities: ', probabilities.get_shape()
-        print 'nms_boxes: ', nms_boxes.get_shape()
-        print 'nms_probs: ', nms_probs.get_shape()
-        print 'bboxes_indices: ', bboxes_indices.get_shape()
-        print 'bboxes_output: ', bboxes_output.get_shape()
-
+        # print 'nms_boxes: ', nms_boxes.get_shape()
+        # print 'nms_probs: ', nms_probs.get_shape()
+        # print 'bboxes_indices: ', bboxes_indices.get_shape()
+        # print 'bboxes_output: ', bboxes_output.get_shape()
+    # return 0
     return bboxes_output
     # for i in xrange(num_bboxes):
     #     for j in xrange(bboxes_shape[1]):
@@ -341,46 +343,75 @@ def predictions(logits, class_feed):
 
 def main(argv):
     image = tf.placeholder(tf.float32, shape=[1, 416, 416, 3])
+    original = tf.placeholder(tf.float32, shape=[1, 1080, 1920, 3])
     class_feed = tf.placeholder(tf.int32, shape=[])
     model = tf.make_template('model', model_spec)
     logits = model(image)
     bboxes = predictions(logits, class_feed)
-    image_bbox = tf.image.draw_bounding_boxes(image, tf.expand_dims(bboxes, 0))
+    image_bbox = tf.image.draw_bounding_boxes(original, tf.expand_dims(bboxes, 0))
     sess = tf.Session()
     saver = tf.train.Saver()
     if load_csv:
         sess.run(tf.global_variables_initializer())
         load_from_binary(sess)
-        print_conv_weights(sess)
+        # print_conv_weights(sess)
     else:
         saver.restore(sess, '/home/jkschin/code/Tiny-YOLO/tiny-yolo-model.ckpt')
 
     # image_in = cv2.imread('/media/jkschin/WD2TB/data/20170206-lornie-road/7290_frames/290_0001.jpg').astype(np.float32)
-    image_in = cv2.imread('sample.jpg').astype(np.float32)
+    image_in = cv2.imread('sample2.jpg').astype(np.float32)
     # YOLO original does processing in RGB
     image_in = cv2.cvtColor(image_in, cv2.COLOR_BGR2RGB)
+    orig = image_in
+    orig = np.expand_dims(orig, 0)
+    orig = orig / 255.0
     image_in = cv2.resize(image_in, (416, 416))
     image_in = np.expand_dims(image_in, 0)
     # darknet scales values from 0 to 1
     image_in = (image_in / 255.0)
-    probs = tf.get_collection('probabilities')
-    scale_logits = tf.get_collection('scale_logits')
-    # scale_logits_val = sess.run(scale_logits, feed_dict={image:image_in})[0]
+    # probs_filtered = tf.get_collection('probabilities_filtered')
+    # probs_filtered_val = sess.run(probs_filtered, feed_dict={image:image_in})[0]
+    # for i in xrange(5):
+    #     for j in xrange(1):
+    #         for k in range(13):
+    #             for l in range(13):
+    #                 print i,j,k,l,probs_filtered_val[i,j,k,l,2]
+    # scale_logits = tf.get_collection('scale_logits')
+    # cls_logits = tf.get_collection('cls_logits')
+    # scale_val = sess.run(scale_logits, feed_dict={image:image_in})[0]
+    # cls_val = sess.run(cls_logits, feed_dict={image:image_in})[0]
+    # for i in xrange(5):
+    #     for j in xrange(1):
+    #         for k in xrange(13):
+    #             for l in xrange(13):
+    #                 prob_obj = scale_val[i,j,k,l,0]
+    #                 print i,j,k,l,prob_obj,cls_val[i,j,k,l,0:4]
+    # probs = tf.get_collection('probabilities')
+    # probs_val = sess.run(probs, feed_dict={image:image_in})[0]
+    # for i in xrange(5):
+    #     for j in xrange(1):
+    #         for k in xrange(13):
+    #             for l in xrange(13):
+    #                 for m in xrange(80):
+    #                     p = probs_val[i,j,k,l,m]
+    #                     if p >= 0.001:
+    #                         print i,j,k,l,m,probs_val[i,j,k,l,m]
     # print scale_logits_val
     # print scale_logits_val.shape
 
-    logits_val = sess.run(logits, feed_dict={image:image_in})[0]
-    for i in range(13):
-        for j in range(13):
-            for k in range(425):
-                print k+j*425+i*13*425, logits_val[i, j, k]
+    # logits_val = sess.run(logits, feed_dict={image:image_in})[0]
+    # for i in range(13):
+    #     for j in range(13):
+    #         for k in range(425):
+    #             print k+j*425+i*13*425, logits_val[i, j, k]
     # for idx, val in enumerate(logits_val.flatten('F')):
     #     print idx, val
     # print logits_val.shape
-    # for class_feed_in in xrange(2, 3):
-    #     logits_val, bboxes_val, image_bbox_val, probs_val = sess.run([logits, bboxes, image_bbox, probs], feed_dict={image: image_in, class_feed: class_feed_in})
-    #     plt.imshow(np.squeeze(image_bbox_val))
-    #     plt.show()
+    for class_feed_in in xrange(2, 3):
+        logits_val, bboxes_val, image_bbox_val, bboxes_val = sess.run([logits, bboxes, image_bbox, bboxes], feed_dict={image: image_in, class_feed: class_feed_in, original:orig})
+        print bboxes_val
+        plt.imshow(np.squeeze(image_bbox_val))
+        plt.show()
     # if save:
     #     saver.save(sess, '/home/jkschin/code/Tiny-YOLO/tiny-yolo-model.ckpt')
     # print bboxes_val
