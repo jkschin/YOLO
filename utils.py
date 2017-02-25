@@ -1,5 +1,9 @@
 import tensorflow as tf
 import numpy as np
+import cv2
+from nms import *
+
+FLAGS = tf.app.flags.FLAGS
 
 def load_4d(sess, shape, conv_weights_vars, pretrained_weights):
     conv_weights = np.empty(shape, dtype=np.float32)
@@ -96,6 +100,49 @@ def darknet_resize(img, w, h):
                 val = dy * part[iy+1, c, k]
                 resized[r, c, k] += val
     return resized
+
+def draw_boxes(img, bboxes, classes, idx_to_txt):
+    h, w, _ = img.shape
+    for i, box in enumerate(bboxes):
+        scale_img = [h, w, h, w]
+        box = [int(a*b) for a,b in zip(box, scale_img)]
+        draw_box(img, classes[i], idx_to_txt, box)
+
+def draw_box(img, cls, idx_to_txt, box):
+    print cls, box
+    hsv = np.array([[[int(cls/float(len(idx_to_txt))*255), 255, 255]]], dtype=np.uint8)
+    bgr = cv2.cvtColor(hsv, cv2.COLOR_HSV2BGR)[0, 0, :]
+    bgr = [int(i) for i in bgr]
+    text = idx_to_txt[cls]
+    cv2.rectangle(img, (box[1], box[0]), (box[3], box[2]), bgr, 2)
+    cv2.putText(img, text, (box[1], box[0]), cv2.FONT_HERSHEY_SIMPLEX, 1, bgr)
+
+def parse_names(filename):
+    f = open(filename, 'r')
+    dic = {}
+    for idx, line in enumerate(f):
+        dic[idx] = line.strip()
+    return dic
+
+def eval_one_image(sess, img):
+    orig = img
+
+    # YOLO original does processing in RGB
+    img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+    img = cv2.resize(img, (416, 416))
+    img = np.expand_dims(img, 0)
+    img = img / 255.0
+    image_ph = tf.get_default_graph().get_tensor_by_name('input:0')
+    bboxes = tf.get_default_graph().get_tensor_by_name('bboxes:0')
+    probabilities = tf.get_default_graph().get_tensor_by_name('probabilities:0')
+    bboxes_val, probabilities_val = sess.run([bboxes, probabilities], feed_dict={image_ph:img})
+    bboxes_out, classes = nms(bboxes_val, probabilities_val, FLAGS.iou_thresh)
+    draw_boxes(orig, bboxes_out, classes, FLAGS.idx_to_txt)
+    return orig
+
+'''
+DEBUG CODE
+'''
 
 def print_layer_weights(sess, feed_dict):
     for node in tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES):

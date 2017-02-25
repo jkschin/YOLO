@@ -1,0 +1,2 @@
+model_checkpoint_path: "/home/jkschin/code/Tiny-YOLO/tiny-yolo-model.ckpt"
+all_model_checkpoint_paths: "/home/jkschin/code/Tiny-YOLO/tiny-yolo-model.ckpt"
