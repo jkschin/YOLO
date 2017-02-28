@@ -30,5 +30,5 @@ def model_spec(image):
         merge.append(logits[:, :, :, base:base+4])
         merge.append(tf.expand_dims(tf.sigmoid(logits[:, :, :, base+4]), -1))
         merge.append(tf.nn.softmax(logits[:, :, :, base+5:base+(FLAGS.num_classes+5)]))
-    logits = tf.concat(3, merge)
+    logits = tf.concat(merge, 3)
     return logits

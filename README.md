@@ -1,4 +1,5 @@
 # Tiny-YOLO
+TensorFlow Version 1.0.0
 Reference implementation from [Darknet YOLO](https://pjreddie.com/darknet/yolo/).
 
 # Architecture
