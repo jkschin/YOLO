@@ -4,6 +4,7 @@ Reference implementation from [Darknet YOLO](https://pjreddie.com/darknet/yolo/)
 # Architecture
 Outputs below are printed when using Darknet.
 Nonlinearity - Leaky ReLU
+```
 0: Convolutional Layer: 416 x 416 x 3 image, 16 filters -> 416 x 416 x 16 image
 1: Maxpool Layer: 416 x 416 x 16 image, 2 size, 2 stride
 2: Convolutional Layer: 208 x 208 x 16 image, 32 filters -> 208 x 208 x 32 image
@@ -19,6 +20,7 @@ Nonlinearity - Leaky ReLU
 12: Convolutional Layer: 13 x 13 x 512 image, 1024 filters -> 13 x 13 x 1024 image
 13: Convolutional Layer: 13 x 13 x 1024 image, 1024 filters -> 13 x 13 x 1024 image
 14: Convolutional Layer: 13 x 13 x 1024 image, 425 filters -> 13 x 13 x 425 image
+```
 
 # Usage
 Ensure Tiny-YOLO is the base directory everything is run from.
@@ -33,6 +35,7 @@ Looking inside tiny-yolo.py should be sufficient for most purposes.
 # Basic Profiles
 All single image processing. No batching involved. In Tiny-YOLO.py as well.
 
+```
 ##################
 === TensorFlow ===
 ##################
@@ -63,3 +66,4 @@ CPU
 1: 0.472595376 FPS
 10: 0.047612055 FPS
 100: 0.471698113 FPS
+```
