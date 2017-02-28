@@ -140,6 +140,13 @@ def eval_one_image(sess, img):
     draw_boxes(orig, bboxes_out, classes, FLAGS.idx_to_txt)
     return orig
 
+def preprocess_image(img):
+    img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+    img = cv2.resize(img, (416, 416))
+    img = np.expand_dims(img, 0)
+    img = img / 255.0
+    return img
+
 '''
 DEBUG CODE
 '''

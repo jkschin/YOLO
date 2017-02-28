@@ -34,7 +34,7 @@ python tiny-yolo.py eval_one_image --image_path [/path/to/image] --prob_thresh 0
 Looking inside tiny-yolo.py should be sufficient for most purposes.
 
 # Basic Profiles
-All single image processing. No batching involved. In Tiny-YOLO.py as well.
+All single image processing. No batching involved. 
 
 ```
 ##################
@@ -50,6 +50,13 @@ GTX 1060 6GB
 CPU
 1: 8.84767865468 FPS
 100: 9.94553707402 FPS
+
+CPU (v1.0.0 with optimizers)
+1: 13.788162895 FPS
+100: 18.042067404 FPS
+
+CPU (v1.0.0 with optimizers and quantized)
+100: 6.43561141096 FPS
 
 ##################
 ==== Darknet =====
