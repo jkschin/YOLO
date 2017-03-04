@@ -31,7 +31,7 @@ def conv_and_bias(n, inp, filter_size, num_filters, stride, padding, nonlinearit
         mean_weights = tf.get_variable(get_name('mean', counters), mean_shape)
         variance_weights = tf.get_variable(get_name('variance', counters), variance_shape)
 
-    conv = tf.nn.conv2d(inp, conv_weights, strides=[1, stride, stride, 1], padding='SAME')
+    conv = tf.nn.conv2d(inp, conv_weights, strides=[1, stride, stride, 1], padding=padding)
     if batch_norm:
         conv = tf.nn.batch_normalization(conv, mean_weights, variance_weights, offset=None, scale=scale_weights, variance_epsilon=0.00001)
     conv_bias = tf.add(conv, bias_weights)

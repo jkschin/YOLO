@@ -4,6 +4,7 @@ import cv2
 import argparse
 import os
 import time
+import threading
 
 from model import model_spec
 from ops import process_logits
@@ -62,6 +63,24 @@ def eval_one_image_x_times(sess, img_in, x_times, image_ph, bboxes, probabilitie
     print 'Read from: ', FLAGS.image_path
     print 'FPS: ', 1 / (total / float(x_times))
 
+def eval_one_image_x_times_threaded(sess, img_in, x_times, image_ph, bboxes, probabilities):
+    threads = []
+    num_threads = 4
+    img_in = preprocess_image(img_in)
+    def threaded_eval(thread_idx):
+        for i in xrange(x_times/num_threads):
+            bboxes_val, probabilities_val = sess.run([bboxes, probabilities], feed_dict={image_ph:img_in})
+    start = time.time()
+    for i in xrange(num_threads):
+        t = threading.Thread(target=threaded_eval, args=(i,))
+        t.daemon = True
+        t.start()
+        threads.append(t)
+    [t.join() for t in threads]
+    end = time.time()
+    print 'Read from: ', FLAGS.image_path
+    print 'FPS: ', 1 / ((end-start) / float(x_times))
+
 def main(argv):
     if FLAGS.load_pb:
         with tf.gfile.GFile(FLAGS.pb_path, 'rb') as f:
@@ -98,6 +117,11 @@ def main(argv):
         x_times = int(argv[2])
         img_in = cv2.imread(FLAGS.image_path).astype(np.float32)
         eval_one_image_x_times(sess, img_in, x_times, inp, bboxes, probabilities)
+
+    elif argv[1] == 'eval_one_image_x_times_threaded':
+        x_times = int(argv[2])
+        img_in = cv2.imread(FLAGS.image_path).astype(np.float32)
+        eval_one_image_x_times_threaded(sess, img_in, x_times, inp, bboxes, probabilities)
 
     elif argv[1] == 'get_pb':
         get_pb()
