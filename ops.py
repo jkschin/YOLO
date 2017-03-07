@@ -38,7 +38,8 @@ def conv_and_bias(n, inp, filter_size, num_filters, stride, padding, nonlinearit
     return conv_bias if nonlinearity is None else nonlinearity(conv_bias, 0.1)
 
 def process_logits(logits):
-    anchor_priors = np.array([[0.738768, 0.874946], [2.42204, 2.65704], [4.30971, 7.04493], [10.246, 4.59428], [12.6868, 11.8741]])
+    anchor_priors = np.array([[0.77871, 1.14074], [3.00525, 4.31277], [9.22725, 9.61974]])
+    # anchor_priors = np.array([[0.738768, 0.874946], [2.42204, 2.65704], [4.30971, 7.04493], [10.246, 4.59428], [12.6868, 11.8741]])
     # bboxes_logits has shape of [B, N, H, W, 4]
     bboxes_logits = tf.stack([logits[:, :, :, i*(FLAGS.num_classes+5):i*(FLAGS.num_classes+5) + 4] for i in xrange(FLAGS.num_bboxes)], 0)
     bboxes_shape = map(lambda f: int(f), bboxes_logits.get_shape())

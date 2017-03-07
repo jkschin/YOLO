@@ -20,8 +20,9 @@ def load_1d(sess, shape, weights_vars, pretrained_weights):
         weights[i] = pretrained_weights[i]
     return sess.run(tf.assign(weights_vars, weights))
 
+# NOTE this is hard coded
 def load_from_binary(sess):
-    f = open('/home/jkschin/code/github-others/darknet/tiny-yolo.weights', 'rb')
+    f = open('/home/jkschin/code/github-others/darknet/yolo9000.weights', 'rb')
     # NOTE This read is important. It reads out the junk.
     for i in xrange(4):
         np.frombuffer(f.read(4), np.int32)
@@ -29,7 +30,7 @@ def load_from_binary(sess):
     pretrained_weights = np.fromfile(f, np.float32)
     var_list = ['bias', 'scale', 'mean', 'variance', 'conv']
     with tf.variable_scope('model', reuse=True):
-        for i in xrange(8):
+        for i in xrange(18):
             for var_name in var_list:
                 if var_name == 'conv':
                     var_name = var_name + '_' + str(i)
@@ -48,7 +49,7 @@ def load_from_binary(sess):
                     print "Loading %s from %d to %d" %(var_name, idx, idx+end_idx)
                     idx += end_idx
 
-        for i in xrange(8, 9):
+        for i in xrange(18, 19):
             for var_name in var_list:
                 if var_name == 'bias':
                     var_name = var_name + '_' + str(i)
@@ -66,7 +67,7 @@ def load_from_binary(sess):
                     var = load_4d(sess, shape, var, pretrained_weights[idx:idx+end_idx])
                     print "Loading %s from %d to %d" %(var_name, idx, idx+end_idx)
                     idx += end_idx
-    assert idx == 16175385
+    # assert idx == 16175385
 
 def darknet_resize(img, w, h):
     shape = img.shape
@@ -124,21 +125,21 @@ def parse_names(filename):
         dic[idx] = line.strip()
     return dic
 
-def eval_one_image(sess, img):
-    orig = img
+# def eval_one_image(sess, img):
+#     orig = img
 
-    # YOLO original does processing in RGB
-    img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-    img = cv2.resize(img, (416, 416))
-    img = np.expand_dims(img, 0)
-    img = img / 255.0
-    image_ph = tf.get_default_graph().get_tensor_by_name('input:0')
-    bboxes = tf.get_default_graph().get_tensor_by_name('bboxes:0')
-    probabilities = tf.get_default_graph().get_tensor_by_name('probabilities:0')
-    bboxes_val, probabilities_val = sess.run([bboxes, probabilities], feed_dict={image_ph:img})
-    bboxes_out, classes = nms(bboxes_val, probabilities_val, FLAGS.iou_thresh)
-    draw_boxes(orig, bboxes_out, classes, FLAGS.idx_to_txt)
-    return orig
+#     # YOLO original does processing in RGB
+#     img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+#     img = cv2.resize(img, (416, 416))
+#     img = np.expand_dims(img, 0)
+#     img = img / 255.0
+#     image_ph = tf.get_default_graph().get_tensor_by_name('input:0')
+#     bboxes = tf.get_default_graph().get_tensor_by_name('bboxes:0')
+#     probabilities = tf.get_default_graph().get_tensor_by_name('probabilities:0')
+#     bboxes_val, probabilities_val = sess.run([bboxes, probabilities], feed_dict={image_ph:img})
+#     bboxes_out, classes = nms(bboxes_val, probabilities_val, FLAGS.iou_thresh)
+#     draw_boxes(orig, bboxes_out, classes, FLAGS.idx_to_txt)
+#     return orig
 
 def preprocess_image(img):
     img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)

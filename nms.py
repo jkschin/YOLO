@@ -1,4 +1,7 @@
+import tensorflow as tf
 import numpy as np
+
+FLAGS = tf.app.flags.FLAGS
 
 def bbox_area(bbox):
     y1, x1, y2, x2 = bbox
@@ -19,10 +22,10 @@ def nms(bboxes, probabilities, iou_thresh):
     # probabilities has shape of [B, N, H, W, 80]
     shape = bboxes.shape
     bboxes = np.reshape(bboxes, [reduce(lambda x, y: x*y, shape[:-1]), 4])
-    probabilities = np.reshape(probabilities, [reduce(lambda x, y: x*y, shape[:-1]), 80])
+    probabilities = np.reshape(probabilities, [reduce(lambda x, y: x*y, shape[:-1]), FLAGS.num_classes])
     for i in xrange(bboxes.shape[0]):
         flag = False
-        for k in xrange(80):
+        for k in xrange(FLAGS.num_classes):
             if probabilities[i][k] > 0:
                 flag = True
         if not flag:
@@ -30,7 +33,7 @@ def nms(bboxes, probabilities, iou_thresh):
         else:
             for j in xrange(i+1, bboxes.shape[0]):
                 if IOU(bboxes[i], bboxes[j]) > iou_thresh:
-                    for l in xrange(80):
+                    for l in xrange(FLAGS.num_classes):
                         if probabilities[i][l] < probabilities[j][l]:
                             probabilities[i][l] = 0.0
                         else:
@@ -38,7 +41,7 @@ def nms(bboxes, probabilities, iou_thresh):
     bboxes_out = []
     classes = []
     for i in xrange(bboxes.shape[0]):
-        for j in xrange(80):
+        for j in xrange(FLAGS.num_classes):
             if probabilities[i][j] > 0.0:
                 bboxes_out.append(bboxes[i])
                 classes.append(j)
