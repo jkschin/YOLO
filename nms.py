@@ -13,9 +13,12 @@ def IOU(bbox1, bbox2):
     b2_y1, b2_x1, b2_y2, b2_x2 = bbox2
     w = min(b1_x2, b2_x2) - max(b1_x1, b2_x1)
     h = min(b1_y2, b2_y2) - max(b1_y1, b2_y1)
-    intersection = w*h
-    union = bbox_area(bbox1) + bbox_area(bbox2) - intersection
-    return intersection / float(union)
+    if w <=0 or h <=0:
+        return -1
+    else:
+        intersection = w*h
+        union = bbox_area(bbox1) + bbox_area(bbox2) - intersection
+        return intersection / float(union)
 
 def nms(bboxes, probabilities, iou_thresh):
     # bboxes has shape of [B, N, H, W, 4]
@@ -46,3 +49,4 @@ def nms(bboxes, probabilities, iou_thresh):
                 bboxes_out.append(bboxes[i])
                 classes.append(j)
     return bboxes_out, classes
+
