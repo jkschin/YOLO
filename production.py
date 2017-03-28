@@ -1,7 +1,7 @@
 import tensorflow as tf
 from tensorflow.python.framework import graph_util
 from tensorflow.python.platform import gfile
-from model import model_spec
+from tiny_yolo import model_spec
 from ops import process_logits
 import time
 
@@ -14,13 +14,13 @@ def get_pb():
         logits = model(inp)
         bboxes, probabilities = process_logits(logits)
 
-    # for n in logits_graph.as_graph_def().node:
-    #     print n.name
-
     with tf.Session(graph=logits_graph) as sess:
         saver = tf.train.Saver()
         saver.restore(sess, FLAGS.read_weights_path)
-        output_graph_def = graph_util.convert_variables_to_constants(sess, logits_graph.as_graph_def(), [bboxes.name[:-2], probabilities.name[:-2]])
+        output_graph_def = graph_util.convert_variables_to_constants(sess,
+                logits_graph.as_graph_def(),
+                [bboxes.name[:-2],
+                probabilities.name[:-2]])
         with gfile.GFile('tiny-yolo.pb', 'wb') as f:
             f.write(output_graph_def.SerializeToString())
 

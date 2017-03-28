@@ -8,14 +8,12 @@ FLAGS = tf.app.flags.FLAGS
 def leaky_relu(x, scalar):
     return tf.maximum(x, tf.scalar_mul(scalar, x))
 
-
 def get_name(layer_name, counters):
     if layer_name not in counters:
         counters[layer_name] = 0
     name = layer_name + '_' + str(counters[layer_name])
     counters[layer_name] += 1
     return name
-
 
 @add_arg_scope
 def conv_and_bias(n, inp, filter_size, num_filters, stride, padding, nonlinearity, batch_norm, counters):
@@ -41,8 +39,6 @@ def conv_and_bias(n, inp, filter_size, num_filters, stride, padding, nonlinearit
 
 
 def process_logits(logits):
-    # NOTE the 3 sets of anchors below are for YOLO9000
-    # anchor_priors = np.array([[0.77871, 1.14074], [3.00525, 4.31277], [9.22725, 9.61974]])
     anchor_priors = np.array([[0.738768, 0.874946], [2.42204, 2.65704], [4.30971, 7.04493], [10.246, 4.59428],
                               [12.6868, 11.8741]])
     # bboxes_logits has shape of [B, N, H, W, 4]
@@ -76,7 +72,6 @@ def process_logits(logits):
     y1s = (y1s - hs/2.0)
     x2s = (x1s + ws)
     y2s = (y1s + hs)
-    # NOTE tf.image.non_max_suppression takes in the coordinates in this format.
     # bboxes has shape of [B, N, H, W, 4]
     bboxes = tf.stack([y1s, x1s, y2s, x2s], axis=-1, name='bboxes')
 

@@ -24,14 +24,23 @@ Nonlinearity - Leaky ReLU
 ```
 
 # Usage
-Ensure Tiny-YOLO is the base directory everything is run from.
-All FLAGS can be parsed in as command lines arguments. For example:
 
 ```
-python tiny-yolo.py eval_one_image --image_path [/path/to/image] --prob_thresh 0.30
+cd /directory/to/clone/to
+git clone https://github.com/jkschin/YOLO
+cd YOLO
+
+# runs sample image
+python main.py image
+
+# runs your own image with various settings
+python main.py image --image_path [/path/to/image] --prob_thresh 0.30
 ```
 
-Looking inside tiny-yolo.py should be sufficient for most purposes.
+# Settings
+--prob_thresh
+--iou_thresh
+Look inside main.py for more settings
 
 # Basic Profiles
 All single image processing. No batching involved. 

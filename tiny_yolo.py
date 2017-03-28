@@ -3,8 +3,6 @@ from ops import *
 from tensorflow.contrib.framework.python.ops import arg_scope
 
 FLAGS = tf.app.flags.FLAGS
-
-
 def model_spec(image):
     layers=[image]
     counters = {}
