@@ -1,6 +1,7 @@
 # Tiny-YOLO
-TensorFlow Version 1.0.0
+TensorFlow Version 1.0.0  
 Reference implementation from [Darknet YOLO](https://pjreddie.com/darknet/yolo/).
+More YOLO architectures will be ported in time to come.
 
 # Architecture
 Outputs below are printed when using Darknet.
@@ -38,9 +39,9 @@ python main.py image --image_path [/path/to/image] --prob_thresh 0.30
 ```
 
 # Settings
---prob_thresh
---iou_thresh
-Look inside main.py for more settings
+--prob_thresh  
+--iou_thresh  
+Look inside main.py for more settings  
 
 # Basic Profiles
 All single image processing. No batching involved. 
