@@ -1,5 +1,5 @@
-import tensorflow as tf
 import numpy as np
+import tensorflow as tf
 
 FLAGS = tf.app.flags.FLAGS
 
@@ -49,4 +49,3 @@ def nms(bboxes, probabilities, iou_thresh):
                 bboxes_out.append(bboxes[i])
                 classes.append(j)
     return bboxes_out, classes
-

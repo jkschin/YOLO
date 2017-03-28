@@ -6,8 +6,8 @@ import os
 import time
 import threading
 
-# from model import model_spec
-from model import yolo9000
+from tiny_yolo import model_spec
+#from model import yolo9000
 from ops import process_logits
 from utils import *
 from production import *
@@ -15,17 +15,17 @@ from benchmarks import *
 
 FLAGS = tf.app.flags.FLAGS
 
-tf.app.flags.DEFINE_integer('num_classes', 9418, 'num classes')
-tf.app.flags.DEFINE_integer('num_bboxes', 3, 'num bboxes')
-# tf.app.flags.DEFINE_integer('num_classes', 80, 'num classes')
-# tf.app.flags.DEFINE_integer('num_bboxes', 5, 'num bboxes')
-tf.app.flags.DEFINE_float('prob_thresh', 0.15, 'prob threshold for scale_prob * cls_prob')
+# tf.app.flags.DEFINE_integer('num_classes', 9418, 'num classes')
+# tf.app.flags.DEFINE_integer('num_bboxes', 3, 'num bboxes')
+tf.app.flags.DEFINE_integer('num_classes', 80, 'num classes')
+tf.app.flags.DEFINE_integer('num_bboxes', 5, 'num bboxes')
+tf.app.flags.DEFINE_float('prob_thresh', 0.20, 'prob threshold for scale_prob * cls_prob')
 tf.app.flags.DEFINE_float('iou_thresh', 0.8, 'iou threshold for NMS')
 tf.app.flags.DEFINE_bool('load_binary', False, 'load binary or not')
 tf.app.flags.DEFINE_bool('save', False, 'save weights or not')
 tf.app.flags.DEFINE_bool('load_pb', False, 'load pb or not')
-tf.app.flags.DEFINE_string('names', '9k.names', 'class indexes to name')
-tf.app.flags.DEFINE_string('read_weights_path', '', 'weights directory to read from')
+tf.app.flags.DEFINE_string('names', 'names/coco.names', 'class indexes to name')
+tf.app.flags.DEFINE_string('weights_path', '', 'weights directory to read from')
 tf.app.flags.DEFINE_string('image_path', '', 'image path')
 tf.app.flags.DEFINE_string('pb_path', '', 'pb path')
 FLAGS.idx_to_txt = parse_names(FLAGS.names)
@@ -46,7 +46,7 @@ def main(argv):
     else:
         with tf.Graph().as_default() as graph:
             inp = tf.placeholder(tf.float32, shape=[1, 416, 416, 3], name='input')
-            model = tf.make_template('model', yolo9000)
+            model = tf.make_template('model', model_spec)
             logits = model(inp)
             bboxes, probabilities = process_logits(logits)
             init_op = tf.global_variables_initializer()
@@ -57,9 +57,9 @@ def main(argv):
             with graph.as_default():
                 load_from_binary(sess)
         else:
-            saver.restore(sess, os.path.join(os.getcwd(), 'tf-yolo9000-weights', 'yolo9000-model.ckpt'))
+            saver.restore(sess, FLAGS.weights_path)
         if FLAGS.save:
-            saver.save(sess, os.path.join(os.getcwd(), 'tf-yolo9000-weights', 'yolo9000-model.ckpt'))
+            saver.save(sess, FLAGS.weights_path)
 
     if argv[1] == 'eval_one_image':
         img_in = cv2.imread(FLAGS.image_path).astype(np.float32)
